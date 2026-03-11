@@ -112,9 +112,9 @@ xlabel(r'frequency (MHz) $\rightarrow$')
 
 ## Compare analytic and numerical wave-impedance
 figure()
-plot(freq*1e-6,real(ZL), linewidth=2, label='$\Re\{Z_L\}$')
+plot(freq*1e-6,real(ZL), linewidth=2, label=r'$\Re\{Z_L\}$')
 grid()
-plot(freq*1e-6,imag(ZL),'r--', linewidth=2, label='$\Im\{Z_L\}$')
+plot(freq*1e-6,imag(ZL),'r--', linewidth=2, label=r'$\Im\{Z_L\}$')
 plot(freq*1e-6,ZL_a,'g-.',linewidth=2, label='$Z_{L, analytic}$')
 ylabel('ZL $(\Omega)$')
 xlabel(r'frequency (MHz) $\rightarrow$')

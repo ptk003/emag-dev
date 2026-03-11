@@ -132,7 +132,7 @@ if 0:  # debugging only
         os.mkdir(Sim_Path)
     CSX.Write2XML(CSX_file)
     from CSXCAD import AppCSXCAD_BIN
-    os.system(AppCSXCAD_BIN + ' "{}"'.format(CSX_file))
+    os.system(AppCSXCAD_BIN + ' "{}r"'.format(CSX_file))
 
 
 if not post_proc_only:

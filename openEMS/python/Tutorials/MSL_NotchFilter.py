@@ -89,8 +89,17 @@ start = [-MSL_width/2,  MSL_width/2, substrate_thickness]
 stop  = [ MSL_width/2,  MSL_width/2+stub_length, substrate_thickness]
 pec.AddBox(start, stop, priority=10 )
 
+## Add a Dump Box to record 3D Electric Fields
+# dump_type=0 means time-domain Electric Field. 
+dump = CSX.AddDump('E_Field_Time', dump_type=0)
+
+# Define the 3D box where you want to record the fields. 
+# Here, we cover the whole substrate area.
+dump.AddBox(start=[-MSL_length, -15*MSL_width, 0], 
+            stop=[MSL_length, 15*MSL_width+stub_length, substrate_thickness])
+
 ### Run the simulation
-if 0:  # debugging only
+if 1:  # debugging only
     CSX_file = os.path.join(Sim_Path, 'notch.xml')
     if not os.path.exists(Sim_Path):
         os.mkdir(Sim_Path)

@@ -154,6 +154,60 @@ def add_to_path(directory):
     print(f"  Added to user PATH: {directory}")
 
 
+def patch_tutorials(openems_dir):
+    """
+    Fix two issues in every tutorial .py file:
+
+    1. Replace any hardcoded OPENEMS_INSTALL_PATH (pointing to the developer's
+       machine) with the actual install path on this machine.
+       CSXCAD/__init__.py calls os.add_dll_directory(OPENEMS_INSTALL_PATH) at
+       import time, so the wrong path causes a DLL load failure.
+
+    2. Add an 'r' prefix to label strings containing bare backslash sequences
+       like '\\Re' and '\\Im', which produce SyntaxWarnings on Python 3.12+
+       and will become errors in a future version.
+    """
+    import re
+
+    tutorials_dir = openems_dir / "python" / "Tutorials"
+    if not tutorials_dir.exists():
+        print(f"  WARNING: Tutorials directory not found: {tutorials_dir}")
+        return
+
+    # Pattern matching any assignment of OPENEMS_INSTALL_PATH
+    path_pattern = re.compile(
+        r"""(os\.environ\[['"]OPENEMS_INSTALL_PATH['"]\]\s*=\s*)r?['"]{1,3}[^'"]*['"]{1,3}"""
+    )
+    # Pattern matching a non-raw string label containing \R or \I (matplotlib LaTeX)
+    escape_pattern = re.compile(
+        r"""(?<![rRbBuU])('(?:[^'\\]|\\.)*\\[RI](?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*\\[RI](?:[^"\\]|\\.)*")"""
+    )
+
+    patched = []
+    for py_file in sorted(tutorials_dir.glob("*.py")):
+        original = py_file.read_text(encoding="utf-8", errors="replace")
+        text = original
+
+        # Fix 1: update OPENEMS_INSTALL_PATH
+        # Use a lambda to avoid backslashes in the replacement string being
+        # treated as regex escape sequences by re.sub.
+        new_path_value = f"r'{openems_dir}'"
+        text = path_pattern.sub(lambda m: m.group(1) + new_path_value, text)
+
+        # Fix 2: add r prefix to affected label strings
+        text = escape_pattern.sub(r"r\1", text)
+
+        if text != original:
+            py_file.write_text(text, encoding="utf-8")
+            patched.append(py_file.name)
+
+    if patched:
+        for name in patched:
+            print(f"  Patched: {name}")
+    else:
+        print("  No patches needed.")
+
+
 def verify_install(python_cmd, openems_dir):
     """Import CSXCAD and openEMS to confirm the installation works."""
     code = (
@@ -202,7 +256,7 @@ def main():
     print("\n=== openEMS Windows Installer ===\n")
 
     # ── 1. Locate openEMS directory ──────────────────────────────────────────
-    print("[1/5] Locating openEMS directory...")
+    print("[1/6] Locating openEMS directory...")
     if args.openems_dir:
         openems_dir = Path(args.openems_dir).resolve()
     else:
@@ -222,7 +276,7 @@ def main():
     python_dir = openems_dir / "python"
 
     # ── 2. Locate Python ────────────────────────────────────────────────────
-    print("\n[2/5] Locating Python executable...")
+    print("\n[2/6] Locating Python executable...")
     if args.python:
         python_cmd = [args.python]
         result = subprocess.run(
@@ -253,12 +307,12 @@ def main():
         )
 
     # ── 3. Install Python prerequisites ────────────────────────────────────
-    print("\n[3/5] Installing Python prerequisites...")
+    print("\n[3/6] Installing Python prerequisites...")
     prereqs = ["numpy", "h5py", "matplotlib", "cython"]
     run(python_cmd + ["-m", "pip", "install", "--upgrade"] + prereqs)
 
     # ── 4. Install wheel files ──────────────────────────────────────────────
-    print("\n[4/5] Installing openEMS Python wheels...")
+    print("\n[4/6] Installing openEMS Python wheels...")
     for prefix in ("csxcad", "openems"):
         wheel = find_wheel(python_dir, prefix, major, minor)
         if not wheel:
@@ -268,12 +322,16 @@ def main():
         run(python_cmd + ["-m", "pip", "install", wheel, "--force-reinstall"])
 
     # ── 5. Set environment variables ────────────────────────────────────────
-    print("\n[5/5] Configuring environment variables...")
+    print("\n[5/6] Configuring environment variables...")
     set_user_env("OPENEMS_INSTALL_PATH", str(openems_dir))
     print(f"  OPENEMS_INSTALL_PATH = {openems_dir}")
 
     if not args.no_path:
         add_to_path(openems_dir)
+
+    # ── 6. Patch tutorial scripts ────────────────────────────────────────────
+    print("\n[6/6] Patching tutorial scripts...")
+    patch_tutorials(openems_dir)
 
     # ── Verify ───────────────────────────────────────────────────────────────
     print("\n[Verify] Testing Python imports...")
