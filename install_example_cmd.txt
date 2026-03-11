@@ -1,0 +1,1 @@
+python install_openEMS.py --openems-dir D:\tools\openEMS --python "C:\Python314\python.exe"
